@@ -1,6 +1,18 @@
 import scrapy
 from pathlib import Path
+from pymongo import MongoClient
+import datetime
 
+
+client = MongoClient("mongodb+srv://qwerty123:qwerty123@cluster0.zrw3uzs.mongodb.net/")
+db = client.scrapy
+def insertToDb(page,filename,title,rating,image,price):
+    collection = db[page]
+    doc = {
+    "title": title,"rating": rating,"image":image,"price":price,
+    "date": datetime.datetime.utcnow()}
+    inserted = collection.insert_one(doc)
+    return inserted.inserted_id
 class BooksSpider(scrapy.Spider):
     name = "books"
     allowed_domains = ["toscrape.com"]
@@ -23,17 +35,18 @@ class BooksSpider(scrapy.Spider):
         cards = response.css(".product_pod")
         for card in cards:
             title=card.css("h3>a::text").get()
-            print(title)
+            # print(title)
             
             rating=card.css(".star-rating").attrib["class"].split(" ")[1]
-            print(rating)
+            # print(rating)
 
             image=card.css(".image_container img")
-            print(image.attrib["src"])
+            image=image.attrib["src"].replace("../../../../media","https://books.toscrape.com/media")
+            # print(image.attrib["src"])
 
             price=card.css(".price_color::text").get()
             price= price.replace("£","").strip()
-            print(price)
+            # print(price)
 
             # availability=card.css(".availability::text").get()
             # if len(availability.css(".icon-ok"))>0:
@@ -42,3 +55,17 @@ class BooksSpider(scrapy.Spider):
             #     inStock =False
 
             # print(availability)
+            insertToDb(page,filename,title,rating,image,price)
+
+class books(scrapy.Spider):
+    name = 'your_spider'
+    start_urls = ["https://toscrape.com"]
+
+    def parse(self, response):
+        # Your scraping logic here
+        # Example: Extracting titles
+        titles = response.css('h2::text').extract()
+
+        for title in titles:
+            yield {'title': title}
+
